@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COA MAITY | Dashboard Operacional</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #111827;
+      --card: rgba(255,255,255,0.06);
+      --card-2: rgba(255,255,255,0.08);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --cyan: #06b6d4;
+      --purple: #8b5cf6;
+      --border: rgba(255,255,255,0.08);
+      --shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1220 0%, #0f172a 35%, #111827 100%);
+      color: var(--text);
+    }
+
+    .layout { display: grid; grid-template-columns: 270px 1fr; min-height: 100vh; }
+    .sidebar {
+      background: rgba(3,7,18,0.95);
+      border-right: 1px solid var(--border);
+      padding: 28px 18px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 30px;
+      padding-bottom: 18px; border-bottom: 1px solid var(--border);
+    }
+    .logo-badge {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      display: grid; place-items: center; font-weight: 700; color: white;
+      box-shadow: var(--shadow);
+    }
+    .logo h1 { font-size: 18px; margin: 0; }
+    .logo p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+
+    .menu { display: grid; gap: 10px; }
+    .menu a {
+      color: var(--text); text-decoration: none; padding: 12px 14px; border-radius: 12px;
+      background: transparent; border: 1px solid transparent; font-size: 14px;
+    }
+    .menu a:hover, .menu a.active {
+      background: var(--card); border-color: var(--border);
+    }
+
+    .sidebar-info {
+      margin-top: 28px; padding: 16px; border: 1px solid var(--border); border-radius: 16px;
+      background: var(--card);
+    }
+    .sidebar-info h3 { margin: 0 0 10px; font-size: 14px; }
+    .sidebar-info p { margin: 6px 0; font-size: 12px; color: var(--muted); }
+
+    main { padding: 28px; }
+    .topbar {
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px;
+      align-items: center; margin-bottom: 24px;
+    }
+    .title h2 { margin: 0; font-size: 30px; }
+    .title p { margin: 8px 0 0; color: var(--muted); }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pill {
+      border: 1px solid var(--border); background: var(--card); color: var(--text);
+      border-radius: 999px; padding: 10px 14px; font-size: 13px;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi {
+      padding: 18px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 18px; box-shadow: var(--shadow);
+    }
+    .kpi .label { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+    .kpi .value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+    .kpi .sub { margin-top: 10px; font-size: 12px; color: var(--muted); }
+    .trend-up { color: var(--green); }
+    .trend-down { color: var(--red); }
+    .trend-warn { color: var(--yellow); }
+
+    .grid-2, .grid-3 {
+      display: grid; gap: 16px; margin-bottom: 16px;
+    }
+    .grid-2 { grid-template-columns: 1.35fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .panel h3 { margin: 0 0 14px; font-size: 18px; }
+    .panel p.caption { margin: -8px 0 14px; color: var(--muted); font-size: 13px; }
+    .chart-wrap { position: relative; min-height: 320px; }
+    .chart-wrap.small { min-height: 280px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; font-size: 12px; color: var(--muted); font-weight: 600;
+      border-bottom: 1px solid var(--border); padding: 12px 8px;
+    }
+    tbody td {
+      padding: 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px;
+    }
+
+    .status {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px;
+      border-radius: 999px; font-size: 12px; font-weight: 700;
+    }
+    .status::before {
+      content: ""; width: 8px; height: 8px; border-radius: 999px; display: inline-block;
+    }
+    .ok { background: rgba(34,197,94,0.12); color: #86efac; }
+    .ok::before { background: var(--green); }
+    .warn { background: rgba(245,158,11,0.12); color: #fcd34d; }
+    .warn::before { background: var(--yellow); }
+    .danger { background: rgba(239,68,68,0.12); color: #fca5a5; }
+    .danger::before { background: var(--red); }
+
+    .alerts { display: grid; gap: 12px; }
+    .alert {
+      border-left: 4px solid var(--yellow);
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px; padding: 14px;
+    }
+    .alert.danger { border-left-color: var(--red); }
+    .alert.ok { border-left-color: var(--green); }
+    .alert .title { font-weight: 700; margin-bottom: 6px; }
+    .alert .desc { color: var(--muted); font-size: 13px; }
+
+    .footer-note {
+      margin-top: 18px; font-size: 12px; color: var(--muted);
+      border-top: 1px solid var(--border); padding-top: 12px;
+    }
+
+    @media (max-width: 1180px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; }
+      main { padding: 18px; }
+      .title h2 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">
+        <div class="logo-badge">COA</div>
+        <div>
+          <h1>Cana de Açúcar</h1>
+          <p>Operação agrícola e colheita</p>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <a class="active" href="#visao-geral">Visão geral</a>
+        <a href="#preparo">Preparo de solo</a>
+        <a href="#colheita">Colheita</a>
+        <a href="#custos">Custos</a>
+        <a href="#frentes">Frentes / talhões</a>
+        <a href="#alertas">Alertas</a>
+        <a href="#integracao">Integração de dados</a>
+      </nav>
+
+      <div class="sidebar-info">
+        <h3>Atualização automática</h3>
+        <p><strong>Fonte:</strong> <span id="fonteDados">dados_coa_cana.json</span></p>
+        <p><strong>Última atualização:</strong> <span id="ultimaAtualizacao">--</span></p>
+        <p><strong>Próxima leitura:</strong> a cada <span id="intervaloAtualizacao">60</span>s</p>
+      </div>
+    </aside>
+
+    <main>
+      <section class="topbar" id="visao-geral">
+        <div class="title">
+          <h2>Dashboard COA | Cana de Açúcar</h2>
+          <p>Monitoramento do prazo de preparo de solo, avanço de colheita, produtividade, ATR, disponibilidade e custos.</p>
+        </div>
+        <div class="actions">
+          <div class="pill">Safra: <strong id="safra">--</strong></div>
+          <div class="pill">Usina / Unidade: <strong id="unidade">--</strong></div>
+          <div class="pill">Semáforo geral: <strong id="statusGeral">--</strong></div>
+        </div>
+      </section>
+
+      <section class="kpis">
+        <div class="kpi"><div class="label">Prazo de preparo de solo</div><div class="value" id="prazoPreparo">--</div><div class="sub" id="prazoPreparoSub">--</div></div>
+        <div class="kpi"><div class="label">Área colhida acumulada</div><div class="value" id="areaColhida">--</div><div class="sub">hectares</div></div>
+        <div class="kpi"><div class="label">Produção acumulada</div><div class="value" id="producao">--</div><div class="sub">toneladas</div></div>
+        <div class="kpi"><div class="label">TCH médio</div><div class="value" id="tch">--</div><div class="sub">toneladas por hectare</div></div>
+        <div class="kpi"><div class="label">ATR médio</div><div class="value" id="atr">--</div><div class="sub">kg/t</div></div>
+        <div class="kpi"><div class="label">CCT médio</div><div class="value" id="cct">--</div><div class="sub" id="cctSub">--</div></div>
+        <div class="kpi"><div class="label">Disponibilidade de frota</div><div class="value" id="disponibilidade">--</div><div class="sub">meta operacional</div></div>
+        <div class="kpi"><div class="label">Perda industrial estimada</div><div class="value" id="perda">--</div><div class="sub">tempo até moagem</div></div>
+      </section>
+
+      <section class="grid-2" id="preparo">
+        <div class="panel">
+          <h3>Avanço diário da colheita vs meta</h3>
+          <p class="caption">Área realizada por dia comparada à meta de colheita planejada.</p>
+          <div class="chart-wrap"><canvas id="chartAvanco"></canvas></div>
+        </div>
+        <div class="panel">
+          <h3>Status do preparo de solo por frente</h3>
+          <p class="caption">Comparativo entre hectares planejados e executados dentro do prazo.</p>
+          <div class="chart-wrap small"><canvas id="chartPreparo"></canvas></div>
+        </div>
+      </section>
+
+      <section class="grid-2" id="colheita">
+        <div class="panel">
+          <h3>Produção diária e ATR</h3>
+          <p class="caption">Acompanhamento conjunto das toneladas colhidas e da qualidade da matéria-prima.</p>
+          <div class="chart-wrap"><canvas id="chartProducaoAtr"></canvas></div>
+        </div>
+        <div class="panel" id="custos">
+          <h3>Custo de CCT por frente</h3>
+          <p class="caption">Corte, carregamento e transporte por frente de trabalho, com comparação contra meta.</p>
+          <div class="chart-wrap small"><canvas id="chartCustos"></canvas></div>
+        </div>
+      </section>
+
+      <section class="grid-2">
+        <div class="panel" id="frentes">
+          <h3>Frentes / talhões acompanhados</h3>
+          <p class="caption">Meta, realizado, produtividade, custo e status operacional.</p>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Frente</th>
+                  <th>Talhão</th>
+                  <th>Meta (ha)</th>
+                  <th>Real (ha)</th>
+                  <th>TCH</th>
+                  <th>ATR</th>
+                  <th>CCT (R$/t)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaFrentes"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel" id="alertas">
+          <h3>Alertas automáticos</h3>
+          <p class="caption">As regras abaixo são recalculadas a cada atualização da fonte de dados.</p>
+          <div class="alerts" id="listaAlertas"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="integracao">
+        <h3>Como alimentar os dados automaticamente</h3>
+        <p class="caption">Este site já está pronto para ler um arquivo JSON ou uma API. Você só precisa apontar a origem dos dados.</p>
+        <div class="grid-3">
+          <div>
+            <h4>Opção 1 — JSON local / rede</h4>
+            <p style="color:var(--muted); line-height:1.6;">Ideal para começar rápido. Gere o arquivo <strong>dados_coa_cana.json</strong> a partir do Excel, Power Automate, Python ou ERP e coloque na mesma pasta do HTML ou em uma pasta compartilhada.</p>
+          </div>
+          <div>
+            <h4>Opção 2 — API corporativa</h4>
+            <p style="color:var(--muted); line-height:1.6;">Substitua a constante <strong>DATA_URL</strong> por um endpoint como <strong>https://seu-servidor/api/coa/cana</strong>. O site atualiza automaticamente sem mexer no HTML.</p>
+          </div>
+          <div>
+            <h4>Opção 3 — SharePoint / Power BI / SQL</h4>
+            <p style="color:var(--muted); line-height:1.6;">Você pode publicar os dados em uma Lista do SharePoint, em um arquivo JSON sincronizado no OneDrive, ou expor uma API acima do SQL Server/PostgreSQL.</p>
+          </div>
+        </div>
+        <div class="footer-note">
+          Dica prática: o caminho mais simples para começar é <strong>Excel → Power Automate / Script → JSON</strong>, e depois evoluir para <strong>API + banco</strong>.
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const DATA_URL = './dados_coa_cana.json';
+    const REFRESH_SECONDS = 60;
+    document.getElementById('intervaloAtualizacao').textContent = REFRESH_SECONDS;
+
+    let charts = {};
+
+    function formatNumber(value, decimals = 0) {
+      return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
+    }
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    }
+    function statusClass(status) {
+      const s = (status || '').toLowerCase();
+      if (s.includes('verde') || s.includes('ok')) return 'ok';
+      if (s.includes('amarelo') || s.includes('aten')) return 'warn';
+      return 'danger';
+    }
+
+    function getSemaforoResumo(kpi) {
+      const regras = [];
+      if (kpi.prazo_preparo_percentual < kpi.meta_prazo_preparo_percentual) regras.push('warn');
+      if (kpi.cct_medio_rs_t > kpi.meta_cct_rs_t) regras.push('danger');
+      if (kpi.disponibilidade_frota_percentual < kpi.meta_disponibilidade_percentual) regras.push('warn');
+      if (kpi.tempo_medio_corte_moagem_h > kpi.meta_tempo_corte_moagem_h) regras.push('danger');
+      if (regras.includes('danger')) return 'Vermelho';
+      if (regras.includes('warn')) return 'Amarelo';
+      return 'Verde';
+    }
+
+    function buildAlerts(data) {
+      const k = data.kpis;
+      const alerts = [];
+
+      if (k.prazo_preparo_percentual < k.meta_prazo_preparo_percentual) {
+        alerts.push({
+          level: 'warn',
+          title: 'Preparo de solo abaixo da meta',
+          desc: `Executado ${formatNumber(k.prazo_preparo_percentual,1)}% dentro do prazo, meta ${formatNumber(k.meta_prazo_preparo_percentual,1)}%. Revisar frentes com atraso.`
+        });
+      } else {
+        alerts.push({
+          level: 'ok',
+          title: 'Preparo de solo dentro do prazo',
+          desc: `A meta de prazo está atendida no consolidado da safra.`
+        });
+      }
+
+      if (k.cct_medio_rs_t > k.meta_cct_rs_t) {
+        alerts.push({
+          level: 'danger',
+          title: 'CCT acima do orçado',
+          desc: `Custo médio em ${formatCurrency(k.cct_medio_rs_t)} por tonelada, acima da meta de ${formatCurrency(k.meta_cct_rs_t)}.`
+        });
+      }
+
+      if (k.disponibilidade_frota_percentual < k.meta_disponibilidade_percentual) {
+        alerts.push({
+          level: 'warn',
+          title: 'Disponibilidade de frota abaixo do alvo',
+          desc: `${formatNumber(k.disponibilidade_frota_percentual,1)}% vs meta de ${formatNumber(k.meta_disponibilidade_percentual,1)}%. Verificar manutenção e tempo de parada.`
+        });
+      }
+
+      if (k.tempo_medio_corte_moagem_h > k.meta_tempo_corte_moagem_h) {
+        alerts.push({
+          level: 'danger',
+          title: 'Tempo corte → moagem elevado',
+          desc: `${formatNumber(k.tempo_medio_corte_moagem_h,1)} h acima da meta de ${formatNumber(k.meta_tempo_corte_moagem_h,1)} h, com risco de perda industrial/ATR.`
+        });
+      }
+
+      const frentesCriticas = data.frentes.filter(f => f.status.toLowerCase().includes('vermelho') || f.cct_rs_t > k.meta_cct_rs_t || f.real_ha < f.meta_ha * 0.9);
+      if (frentesCriticas.length) {
+        alerts.push({
+          level: 'danger',
+          title: 'Frentes críticas identificadas',
+          desc: `${frentesCriticas.map(f => f.frente + ' (' + f.talhao + ')').join(', ')}.`
+        });
+      }
+      return alerts;
+    }
+
+    function renderKPIs(data) {
+      const k = data.kpis;
+      const semaforo = getSemaforoResumo(k);
+
+      document.getElementById('safra').textContent = data.meta.safra;
+      document.getElementById('unidade').textContent = data.meta.unidade;
+      document.getElementById('statusGeral').textContent = semaforo;
+      document.getElementById('fonteDados').textContent = DATA_URL;
+      document.getElementById('ultimaAtualizacao').textContent = new Date(data.meta.atualizado_em).toLocaleString('pt-BR');
+
+      document.getElementById('prazoPreparo').textContent = formatNumber(k.prazo_preparo_percentual, 1) + '%';
+      document.getElementById('prazoPreparoSub').innerHTML = `Meta: <span class="${k.prazo_preparo_percentual >= k.meta_prazo_preparo_percentual ? 'trend-up' : 'trend-warn'}">${formatNumber(k.meta_prazo_preparo_percentual,1)}%</span>`;
+
+      document.getElementById('areaColhida').textContent = formatNumber(k.area_colhida_ha, 0);
+      document.getElementById('producao').textContent = formatNumber(k.producao_ton, 0);
+      document.getElementById('tch').textContent = formatNumber(k.tch_medio, 1);
+      document.getElementById('atr').textContent = formatNumber(k.atr_medio_kg_t, 1);
+      document.getElementById('cct').textContent = formatCurrency(k.cct_medio_rs_t);
+      document.getElementById('cctSub').innerHTML = `Meta: <span class="${k.cct_medio_rs_t <= k.meta_cct_rs_t ? 'trend-up' : 'trend-down'}">${formatCurrency(k.meta_cct_rs_t)}</span>`;
+      document.getElementById('disponibilidade').textContent = formatNumber(k.disponibilidade_frota_percentual, 1) + '%';
+      document.getElementById('perda').textContent = formatNumber(k.tempo_medio_corte_moagem_h, 1) + ' h';
+    }
+
+    function upsertChart(key, config) {
+      if (charts[key]) {
+        charts[key].data = config.data;
+        charts[key].options = config.options;
+        charts[key].update();
+      } else {
+        charts[key] = new Chart(document.getElementById(key), config);
+      }
+    }
+
+    function renderCharts(data) {
+      const labelsAvanco = data.series.avanco_diario.map(x => x.data);
+      const areaMeta = data.series.avanco_diario.map(x => x.meta_ha);
+      const areaReal = data.series.avanco_diario.map(x => x.real_ha);
+
+      upsertChart('chartAvanco', {
+        type: 'line',
+        data: {
+          labels: labelsAvanco,
+          datasets: [
+            { label: 'Meta (ha)', data: areaMeta, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.2)', tension: 0.35, fill: false, pointRadius: 3 },
+            { label: 'Real (ha)', data: areaReal, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.18)', tension: 0.35, fill: true, pointRadius: 3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e5e7eb' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+
+      const prepLabels = data.series.preparo_solo.map(x => x.frente);
+      upsertChart('chartPreparo', {
+        type: 'bar',
+        data: {
+          labels: prepLabels,
+          datasets: [
+            { label: 'Planejado (ha)', data: data.series.preparo_solo.map(x => x.planejado_ha), backgroundColor: '#3b82f6' },
+            { label: 'Executado no prazo (ha)', data: data.series.preparo_solo.map(x => x.executado_ha), backgroundColor: '#06b6d4' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e5e7eb' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+
+      const prodLabels = data.series.producao_atr.map(x => x.data);
+      upsertChart('chartProducaoAtr', {
+        type: 'bar',
+        data: {
+          labels: prodLabels,
+          datasets: [
+            { label: 'Produção (t)', data: data.series.producao_atr.map(x => x.toneladas), backgroundColor: 'rgba(34,197,94,0.75)', yAxisID: 'y' },
+            { label: 'ATR (kg/t)', data: data.series.producao_atr.map(x => x.atr), type: 'line', borderColor: '#8b5cf6', backgroundColor: '#8b5cf6', tension: 0.35, yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e5e7eb' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: { type: 'linear', position: 'left', ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y1: { type: 'linear', position: 'right', ticks: { color: '#c4b5fd' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+
+      upsertChart('chartCustos', {
+        type: 'bar',
+        data: {
+          labels: data.frentes.map(x => x.frente),
+          datasets: [
+            { label: 'CCT real (R$/t)', data: data.frentes.map(x => x.cct_rs_t), backgroundColor: data.frentes.map(x => x.cct_rs_t <= data.kpis.meta_cct_rs_t ? '#22c55e' : '#ef4444') },
+            { label: 'Meta CCT', data: data.frentes.map(() => data.kpis.meta_cct_rs_t), type: 'line', borderColor: '#f59e0b', backgroundColor: '#f59e0b', tension: 0 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#e5e7eb' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+
+    function renderTabelaFrentes(data) {
+      const tbody = document.getElementById('tabelaFrentes');
+      tbody.innerHTML = '';
+      data.frentes.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${f.frente}</td>
+          <td>${f.talhao}</td>
+          <td>${formatNumber(f.meta_ha,0)}</td>
+          <td>${formatNumber(f.real_ha,0)}</td>
+          <td>${formatNumber(f.tch,1)}</td>
+          <td>${formatNumber(f.atr,1)}</td>
+          <td>${formatCurrency(f.cct_rs_t)}</td>
+          <td><span class="status ${statusClass(f.status)}">${f.status}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAlerts(data) {
+      const list = document.getElementById('listaAlertas');
+      list.innerHTML = '';
+      const alerts = buildAlerts(data);
+      alerts.forEach(a => {
+        const div = document.createElement('div');
+        div.className = `alert ${a.level}`;
+        div.innerHTML = `<div class="title">${a.title}</div><div class="desc">${a.desc}</div>`;
+        list.appendChild(div);
+      });
+    }
+
+    async function carregarDados() {
+      try {
+        const resp = await fetch(`${DATA_URL}?t=${Date.now()}`, { cache: 'no-store' });
+        if (!resp.ok) throw new Error('Falha ao carregar dados');
+        const data = await resp.json();
+        renderKPIs(data);
+        renderCharts(data);
+        renderTabelaFrentes(data);
+        renderAlerts(data);
+      } catch (error) {
+        console.error(error);
+        document.getElementById('listaAlertas').innerHTML = `
+          <div class="alert danger">
+            <div class="title">Erro na leitura da fonte de dados</div>
+            <div class="desc">Verifique se o arquivo/endpoint existe e está liberado para acesso. Detalhe: ${error.message}</div>
+          </div>`;
+      }
+    }
+
+    carregarDados();
+    setInterval(carregarDados, REFRESH_SECONDS * 1000);
+  </script>
+</body>
+</html>
